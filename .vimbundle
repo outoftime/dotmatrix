@@ -1,16 +1,12 @@
 hashrocket/vim-hashrocket
 AndrewRadev/splitjoin.vim
-adamlowe/vim-slurper
 duff/vim-bufonly
 ervandew/supertab
 godlygeek/tabular
 gregsexton/gitv
-heartsentwined/vim-emblem
-jgdavey/tslime.vim
 jgdavey/vim-blockle
 jgdavey/vim-railscasts
 jgdavey/vim-turbux
-jgdavey/vim-weefactor
 kchmck/vim-coffee-script
 leshill/vim-json
 mileszs/ack.vim

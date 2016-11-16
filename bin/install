@@ -15,17 +15,19 @@ else
 fi
 
 # Copy *.local files
-for dotfile in .*.local ; do
-  dotmatrix_path=$PWD/$dotfile
-  path="$HOME/$dotfile"
+if [ "$1" = "--workstation" ]; then
+  for dotfile in .*.local ; do
+    dotmatrix_path=$PWD/$dotfile
+    path="$HOME/$dotfile"
 
-  if [ ! -e $path ]; then
-    copy_notice $dotfile "absent"
-    cp $dotmatrix_path $path
-  else
-    skip_notice $dotfile "exists"
-  fi
-done
+    if [ ! -e $path ]; then
+      copy_notice $dotfile "absent"
+      cp $dotmatrix_path $path
+    else
+      skip_notice $dotfile "exists"
+    fi
+  done
+fi
 
 for dotfile in $(./bin/file_list.sh); do
   dotmatrix_path="$PWD/$dotfile"
@@ -42,17 +44,25 @@ for dotfile in $(./bin/file_list.sh); do
 done
 
 # Symlink $HOME-relative files, preserving directory structure
+if [[ "$OSTYPE" == 'darwin'* ]]; then
+  for file in $(find custom -type f -not -name '*README*'); do
+    path=${file/"custom"/$HOME}
+    name=$(basename $file)
+    if [ ! -L $path ]; then
+      dest=$(dirname $path)
+      link_notice $name "absent"
+      mkdir -p $dest
+      ln -nfs $PWD/$file $dest
+    else
+      skip_notice $name "exists"
+    fi
+  done
+fi
 
-for file in $(find custom -type f -not -name '*README*'); do
-  path=${file/"custom"/$HOME}
-  name=$(basename $file)
-  if [ ! -L $path ]; then
-    dest=$(dirname $path)
-    link_notice $name "absent"
-    mkdir -p $dest
-    ln -nfs $PWD/$file $dest
-  else
-    skip_notice $name "exists"
-  fi
-done
+if [ ! -e "$HOME/.gitconfig.local" ]; then
+  echo -e "\nNo .gitconfig.local found - if you want the workstation version run this:"
+  echo -e "  $ cp .gitconfig.local ~/"
+  echo -e "Reminder: pass the --workstation flag to copy this file automatically.\n"
+fi
 
+$PWD/hr/bin/hr autoinstall

@@ -37,7 +37,7 @@ autoload colors; colors
 bindkey -e
 
 # options
-setopt appendhistory autocd extendedglob histignoredups nonomatch prompt_subst interactivecomments
+setopt appendhistory extendedglob histignoredups nonomatch prompt_subst interactivecomments
 
 # Bindings
 # external editor support
@@ -69,7 +69,13 @@ if [ -z "$TMUX" ]; then
 fi
 
 # prompt
-PROMPT='%{$fg_bold[green]%}%n@%m%{$reset_color%}:%{$fg_bold[cyan]%}%~%{$reset_color%}$(git_prompt_info "(%s)")%# '
+p=
+if [ -n "$SSH_CONNECTION" ]; then
+  p='%{$fg_bold[yellow]%}%n@%m'
+else
+  p='%{$fg_bold[green]%}%n@%m'
+fi
+PROMPT="$p%{\$reset_color%}:%{\$fg_bold[cyan]%}%~%{\$reset_color%}\$(git_prompt_info '(%s)')%# "
 
 # show non-success exit code in right prompt
 RPROMPT="%(?..{%{$fg[red]%}%?%{$reset_color%}})"
@@ -87,13 +93,9 @@ setopt INC_APPEND_HISTORY
 export PSQL_EDITOR='vim -c"setf sql"'
 
 # aliases
-alias mv='nocorrect mv'       # no spelling correction on mv
-alias cp='nocorrect cp'
-alias mkdir='nocorrect mkdir'
-alias rspec='nocorrect rspec'
+alias l="ls -F -G -lah"
 alias ll="ls -l"
 alias la="ls -a"
-alias l.='ls -ld .[^.]*'
 alias lsd='ls -ld *(-/DN)'
 alias md='mkdir -p'
 alias rd='rmdir'
@@ -101,12 +103,12 @@ alias cd..='cd ..'
 alias ..='cd ..'
 alias groutes='rake routes | grep $@'
 
-# set cd autocompletion to commonly visited directories
-cdpath=(~ ~/src $DEV_DIR $HASHROCKET_DIR)
+l.() {
+  ls -ld "${1:-$PWD}"/.[^.]*
+}
 
 # rvm-install added line:
 if [[ -s "$HOME/.rvm/scripts/rvm" ]] ; then source "$HOME/.rvm/scripts/rvm" ; fi
-PATH=$PATH:$HOME/.rvm/bin # Add RVM to PATH for scripting
 
 cuke() {
   local file="$1"
@@ -115,12 +117,12 @@ cuke() {
 }
 compctl -g '*.feature' -W features cuke
 
-# nice completion for gco function
-compdef _git gco=git-checkout
-
 # import local zsh customizations, if present
 zrcl="$HOME/.zshrc.local"
 [[ ! -a $zrcl ]] || source $zrcl
+
+# set cd autocompletion to commonly visited directories
+cdpath=(~ ~/src $DEV_DIR $SOURCE_DIR)
 
 # remove duplicates in $PATH
 typeset -aU path

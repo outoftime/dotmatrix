@@ -1,10 +1,14 @@
 # vim:set ft=sh sw=2 sts=2:
 
-[ -e "$HASHROCKET_DIR" ] || HASHROCKET_DIR="$HOME/hashrocket"
-export HASHROCKET_DIR
+[ -e "$SOURCE_DIR" ] || SOURCE_DIR="$HOME/hashrocket"
+export SOURCE_DIR
+
+# DEPRECATED: Use more generic SOURCE_DIR. HASHROCKET_DIR persists as a
+# legacy artifact, and for 3rd-party scripts.
+export HASHROCKET_DIR=$SOURCE_DIR
 
 # Paths for prepending
-for dir in /usr/local/bin "$HOME/bin" .git/bin .git/safe/../../bin; do
+for dir in /usr/local/bin "$HOME/bin" .git/safe/../../bin; do
   case "$PATH:" in
     *:"$dir":*) PATH="`echo "$PATH"|sed -e "s#:$dir##"`" ;;
   esac
@@ -22,87 +26,19 @@ for dir in /usr/local/sbin /opt/local/sbin /usr/X11/bin; do
   esac
 done
 
-hcd() {
-  cd "$HASHROCKET_DIR/$1"
-  if [ -e .git/safe -a ! -L .git/bin ]; then
-    ln -s ../bin .git
-  fi
-}
-
-git() {
-  if command -v hub >/dev/null; then
+if command -v hub >/dev/null; then
+  git() {
     command hub "$@"
-  else
-    command git "$@"
-  fi
-}
-
-hitch() {
-  command hitch "$@"
-  if [[ -s "$HOME/.hitch_export_authors" ]] ; then source "$HOME/.hitch_export_authors" ; fi
-}
-alias unhitch='hitch -u'
-
-# Tab completion
-if [ -n "$BASH_VERSION" ]; then
-  _hcd()
-  {
-    local cur projects
-
-    [ -r "$HASHROCKET_DIR" ] || return 0
-
-    eval 'COMPREPLY=()'
-    cur=${COMP_WORDS[COMP_CWORD]}
-    projects=$(\ls "$HASHROCKET_DIR")
-
-    if [ $COMP_CWORD -eq 1 ]; then
-      eval 'COMPREPLY=( $(compgen -o filenames -W "$projects" $cur) )'
-    fi
-
-    return 0
   }
-  complete -F _hcd hcd hclone
-elif [ -n "$ZSH_VERSION" ]; then
-  compctl -/ -S '' -W "$HASHROCKET_DIR" hcd
 fi
-
-__rails_root() {
-  (
-  dir=${1:-$(pwd)}
-  i=0
-  while [ "/" != "$dir" -a "$i" -ne 16 ]; do
-    if [ -f "$dir/config/environment.rb" ]; then
-      echo "$dir"
-      return 0
-    fi
-    dir="$(dirname "$dir")"
-    i=$(expr $i + 1)
-  done
-  return 1
-  )
-}
-
-script_rails() {
-  local root="`__rails_root`"
-  if [ -f "$root/script/rails" ]; then
-    "$root/script/rails" "$@"
-  elif [ -f "$root/bin/rails" -a -f "$root/config/application.rb" ]; then
-    "$root/bin/rails" "$@"
-  else
-    local name
-    name="$1"
-    shift
-    "$root/script/$name" "$@"
-  fi
-}
 
 twiki () {
   rake db:migrate && rake db:migrate:redo && rake db:test:prepare
 }
 
-alias sc='script_rails console'
-alias ss='script_rails server'
-alias sdbc='script_rails dbconsole -p'
+alias sc='rails console'
+alias ss='rails server'
+alias sdbc='rails dbconsole -p'
 
 alias ll='ls -l'
 
@@ -155,23 +91,17 @@ git_prompt_info () {
   fi
 }
 
-gco () {
-  if [[ $1 == '.' ]]; then
-    git add -A
-    git commit -m "CHECKING OUT CURRENT DIRECTORY" -q
-    git reset HEAD^ -q
-    git checkout .
-  else
-    git checkout "$@"
-  fi
-}
-
 gcr() {
   git checkout -b $1 origin/$1
 }
 
+# git reset empty files
+gref() {
+  command git --no-pager diff --cached --stat | command grep "|\s*0$" | awk '{system("command git reset " $1)}'
+}
+
 alias gap='git add -p'
-alias gnap='git add -N . && git add -p'
+alias gnap='git add -N --ignore-removal . && gap && gref'
 alias glp='git log -p'
 alias glg='git log --graph --oneline --decorate --color --all'
 alias gb='git branch'
@@ -189,6 +119,7 @@ alias gst='git status'
 alias gr='git rebase'
 alias grc='git rebase --continue'
 alias gra='git rebase --abort'
+alias gco='git checkout'
 alias reset-authors='git commit --amend --reset-author -C HEAD'
 alias vi='vim'
 
@@ -197,3 +128,6 @@ if [ "$(uname)" = Darwin -a "$(command -v vim)" = /usr/bin/vim ]; then
   [ -f "$bettervim" ] && alias vim="$bettervim"
   [ -f "$HOME$bettervim" ] && alias vim="$HOME$bettervim"
 fi
+
+# RVM exectuble path for scripting, when available
+if [[ -s "$HOME/.rvm/bin" ]] ; then export PATH="$PATH:$HOME/.rvm/bin" ; fi
